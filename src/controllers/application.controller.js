@@ -293,10 +293,83 @@ const GetApplicationStatus=asynchandler(async(req,res)=>{
     );
 });
 
+const ReviewApplication=asynchandler(async(req,res)=>{
+    const {applicationId}=req.params;
+    const {status,offerLetterUrl}=req.body;
+    
+    // Validate applicationId
+    if(!isValidObjectId(applicationId)){
+        throw new ApiError(400,"Invalid application ID");
+    }
+    
+    // Validate status
+    if(!status){
+        throw new ApiError(400,"Status is required");
+    }
+    
+    if(!["SHORTLISTED","OFFER","REJECTED"].includes(status)){
+        throw new ApiError(400,"Status must be SHORTLISTED, OFFER, or REJECTED");
+    }
+    
+    // If status is OFFER, offer letter URL is required
+    if(status==="OFFER" && !offerLetterUrl){
+        throw new ApiError(400,"Offer letter URL is required when status is OFFER");
+    }
+    
+    // Find the application and populate job with company
+    const application=await Application.findById(applicationId)
+        .populate({
+            path:'job',
+            populate:{
+                path:'company',
+                populate:{path:'founders.userId'}
+            }
+        });
+    
+    if(!application){
+        throw new ApiError(404,"Application not found");
+    }
+    
+    // Authorization: Only company founders or admin can review applications
+    const isFounder=application.job?.company?.founders?.some(
+        founder=>founder.userId?._id?.toString()===req.user._id.toString()
+    );
+    
+    if(req.user.role!=="ADMIN" && !isFounder){
+        throw new ApiError(403,"You are not authorized to review this application");
+    }
+    
+    // Build update object
+    const updateFields={
+        status,
+        reviewedBy:req.user._id
+    };
+    
+    // Add offer letter URL if status is OFFER
+    if(status==="OFFER"){
+        updateFields.offerLetterUrl=offerLetterUrl;
+    }
+    
+    // Update application
+    const updatedApplication=await Application.findByIdAndUpdate(
+        applicationId,
+        {$set:updateFields},
+        {new:true}
+    ).populate('job','title location salary jobType')
+     .populate('company','name email Logo')
+     .populate('student','name email username profilePicture')
+     .populate('reviewedBy','name email username');
+    
+    return res.status(200).json(
+        new ApiResponse(200,updatedApplication,`Application ${status.toLowerCase()} successfully`)
+    );
+});
+
 export {
     SubmitApplication,
     DeleteApplication,
     GetJobApplications,
     GetUserApplications,
-    GetApplicationStatus
+    GetApplicationStatus,
+    ReviewApplication
 };

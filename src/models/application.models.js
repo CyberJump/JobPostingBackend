@@ -28,6 +28,9 @@ const applicationSchema=new Schema({
     addtionalDocuments:[{
         type:String,
     }],
+    offerLetterUrl:{
+        type:String,
+    },
     reviewedBy:{
         type:mongoose.Types.ObjectId,
         ref:"User",
