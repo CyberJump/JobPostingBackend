@@ -4,6 +4,7 @@ import {asynchandler} from "../utils/asynchandler.js";
 import mongoose, {isValidObjectId} from "mongoose";
 import {Company} from "../models/company.models.js";
 import {User} from "../models/user.models.js";
+import { uploadOnCloudinary, DeletefromCloudinary } from "../utils/cloudinary.js";
 
 const RegisterCompany=asynchandler(async(req,res)=>{
     const {name,email,description,website,Logo}=req.body;
@@ -70,16 +71,32 @@ const UpdateCompanyDetails=asynchandler(async(req,res)=>{
     }
     
     // Extract update fields
-    const {name,email,description,website,Logo}=req.body;
+    const {name,email,description,website}=req.body;
+    let {Logo}=req.body;
     
-    // Build update object with only provided fields
+    // Handle File Upload if present
+    const logoLocalPath = req.file?.path;
+    if (logoLocalPath) {
+        const cloudinaryResponse = await uploadOnCloudinary(logoLocalPath);
+        if (cloudinaryResponse) {
+            if (company.Logo && company.Logo.includes("cloudinary.com")) {
+                const parts = company.Logo.split("/");
+                const fileName = parts[parts.length - 1];
+                const publicId = fileName.split(".")[0];
+                await DeletefromCloudinary(publicId);
+            }
+            Logo = cloudinaryResponse.url;
+        }
+    }
+
+    // Build update object
     const updateFields={};
     if(name) updateFields.name=name;
     if(description) updateFields.description=description;
     if(website!==undefined) updateFields.website=website;
     if(Logo!==undefined) updateFields.Logo=Logo;
     
-    // Check if email is being updated and if it's already taken
+    // Email update check
     if(email && email!==company.email){
         const existingCompany=await Company.findOne({email});
         if(existingCompany){
@@ -88,7 +105,6 @@ const UpdateCompanyDetails=asynchandler(async(req,res)=>{
         updateFields.email=email;
     }
     
-    // Update company
     const updatedCompany=await Company.findByIdAndUpdate(
         companyId,
         {$set:updateFields},
@@ -104,19 +120,13 @@ const UpdateCompanyDetails=asynchandler(async(req,res)=>{
 const WithdrawCompany=asynchandler(async(req,res)=>{
     const {companyId}=req.params;
     
-    // Validate companyId
     if(!isValidObjectId(companyId)){
         throw new ApiError(400,"Invalid company ID");
     }
     
-    // Find the company and populate founders
     const company=await Company.findById(companyId).populate('founders.userId');
+    if(!company) throw new ApiError(404,"Company not found");
     
-    if(!company){
-        throw new ApiError(404,"Company not found");
-    }
-    
-    // Authorization: Only company founders or admin can withdraw
     const isFounder=company.founders?.some(
         founder=>founder.userId?._id?.toString()===req.user._id.toString()
     );
@@ -125,146 +135,101 @@ const WithdrawCompany=asynchandler(async(req,res)=>{
         throw new ApiError(403,"You are not authorized to withdraw this company");
     }
     
-    // Delete the company
     await Company.findByIdAndDelete(companyId);
     
-    return res.status(200).json(
-        new ApiResponse(200,{},"Company withdrawn successfully")
-    );
+    return res.status(200).json(new ApiResponse(200,{},"Company withdrawn successfully"));
 });
 
 const GetCompanyDetails=asynchandler(async(req,res)=>{
     const {companyId}=req.params;
+    if(!isValidObjectId(companyId)) throw new ApiError(400,"Invalid company ID");
     
-    // Validate companyId
-    if(!isValidObjectId(companyId)){
-        throw new ApiError(400,"Invalid company ID");
-    }
-    
-    // Find company and populate related data
     const company=await Company.findById(companyId)
         .populate('founders.userId','name email username profilePicture')
         .populate('approvedBy','name email');
     
-    if(!company){
-        throw new ApiError(404,"Company not found");
-    }
+    if(!company || company.status==="BLOCKED") throw new ApiError(404,"Company not found");
     
-    // Hide BLOCKED companies from public view
-    if(company.status==="BLOCKED"){
-        throw new ApiError(404,"Company not found");
-    }
-    
-    return res.status(200).json(
-        new ApiResponse(200,company,"Company details fetched successfully")
-    );
+    return res.status(200).json(new ApiResponse(200,company,"Company details fetched successfully"));
 });
 
 const GetAllCompanies=asynchandler(async(req,res)=>{
-    const {page=1,limit=10,status,search}=req.query;
-    
-    // Build match stage
+    const {page=1,limit=10,status,search,myCompanies}=req.query;
     const matchStage={};
-    
-    // Filter by status if provided
+
+    // Filter by myCompanies (Authorization Hardening)
+    // STRICTLY enforce for COMPANY role to prevent accessing others' data
+    if (req.user?.role === "COMPANY") {
+        matchStage['founders.userId'] = req.user._id;
+    } 
+    // For ADMIN or others, allow optional filtering
+    else if(myCompanies === 'true' && req.user){
+        matchStage['founders.userId'] = req.user._id;
+    }
+
     if(status){
-        if(!["ACTIVE","PENDING","BLOCKED"].includes(status)){
-            throw new ApiError(400,"Invalid status. Must be ACTIVE, PENDING, or BLOCKED");
-        }
+        if(!["ACTIVE","PENDING","BLOCKED"].includes(status)) throw new ApiError(400,"Invalid status");
         matchStage.status=status;
-    } else {
-        // By default, exclude BLOCKED companies from public view
-        matchStage.status={$ne:"BLOCKED"};
-    }
+    } else matchStage.status={$ne:"BLOCKED"};
     
-    // Search by name or description
     if(search){
-        matchStage.$or=[
-            {name:{$regex:search,$options:'i'}},
-            {description:{$regex:search,$options:'i'}}
-        ];
+        matchStage.$or=[{name:{$regex:search,$options:'i'}},{description:{$regex:search,$options:'i'}}];
     }
     
-    // Build aggregation pipeline
     const aggregate=Company.aggregate([
         {$match:matchStage},
         {$sort:{createdAt:-1}},
-        {
-            $lookup:{
-                from:'users',
-                localField:'founders.userId',
-                foreignField:'_id',
-                as:'populatedFounders'
-            }
-        },
-        {
-            $lookup:{
-                from:'users',
-                localField:'approvedBy',
-                foreignField:'_id',
-                as:'approvedByDetails'
-            }
-        },
+        {$lookup:{from:'users',localField:'founders.userId',foreignField:'_id',as:'populatedFounders'}},
         {
             $project:{
-                name:1,
-                email:1,
-                description:1,
-                website:1,
-                Logo:1,
-                status:1,
-                createdAt:1,
-                updatedAt:1,
-                approvedBy: { $arrayElemAt: ["$approvedByDetails", 0] },
-                founders: {
-                    $map: {
-                        input: "$founders",
-                        as: "f",
-                        in: {
-                            userId: {
-                                $arrayElemAt: [
-                                    {
-                                        $filter: {
-                                            input: "$populatedFounders",
-                                            as: "pf",
-                                            cond: { $eq: ["$$pf._id", "$$f.userId"] }
-                                        }
-                                    },
-                                    0
-                                ]
-                            }
+                name:1,email:1,description:1,website:1,Logo:1,status:1,createdAt:1,updatedAt:1,
+                founders:{
+                    $map:{
+                        input:"$founders",as:"f",in:{
+                            userId:{$arrayElemAt:[{$filter:{input:"$populatedFounders",as:"pf",cond:{$eq:["$$pf._id","$$f.userId"]}}},0]}
                         }
                     }
                 }
             }
         },
-        {
-            $project: {
-                "founders.userId.password": 0,
-                "founders.userId.refreshToken": 0,
-                "approvedBy.password": 0,
-                "approvedBy.refreshToken": 0
-            }
-        }
+        {$project:{"founders.userId.password":0,"founders.userId.refreshToken":0}}
     ]);
     
-    // Apply pagination
-    const options={
-        page:parseInt(page),
-        limit:parseInt(limit)
-    };
-    
-    const companies=await Company.aggregatePaginate(aggregate,options);
-    
-    return res.status(200).json(
-        new ApiResponse(200,companies,"Companies fetched successfully")
-    );
+    const companies=await Company.aggregatePaginate(aggregate,{page:parseInt(page),limit:parseInt(limit)});
+    return res.status(200).json(new ApiResponse(200,companies,"Companies fetched successfully"));
 });
 
-export {
-    RegisterCompany,
-    UpdateCompanyDetails,
-    WithdrawCompany,
-    GetCompanyDetails,
-    GetAllCompanies
-};
+// Protected function for company dashboard - strictly returns only user's companies
+const GetMyCompanies=asynchandler(async(req,res)=>{
+    const {page=1,limit=10}=req.query;
+    
+    // Strictly filter by the authenticated user's ID
+    const matchStage = {
+        'founders.userId': req.user._id,
+        status: { $ne: "BLOCKED" }
+    };
+    
+    const aggregate=Company.aggregate([
+        {$match:matchStage},
+        {$sort:{createdAt:-1}},
+        {$lookup:{from:'users',localField:'founders.userId',foreignField:'_id',as:'populatedFounders'}},
+        {
+            $project:{
+                name:1,email:1,description:1,website:1,Logo:1,status:1,createdAt:1,updatedAt:1,
+                founders:{
+                    $map:{
+                        input:"$founders",as:"f",in:{
+                            userId:{$arrayElemAt:[{$filter:{input:"$populatedFounders",as:"pf",cond:{$eq:["$$pf._id","$$f.userId"]}}},0]}
+                        }
+                    }
+                }
+            }
+        },
+        {$project:{"founders.userId.password":0,"founders.userId.refreshToken":0}}
+    ]);
+    
+    const companies=await Company.aggregatePaginate(aggregate,{page:parseInt(page),limit:parseInt(limit)});
+    return res.status(200).json(new ApiResponse(200,companies,"Your companies fetched successfully"));
+});
+
+export {RegisterCompany,UpdateCompanyDetails,WithdrawCompany,GetCompanyDetails,GetAllCompanies,GetMyCompanies};

@@ -4,23 +4,35 @@ import {
     UpdateCompanyDetails,
     WithdrawCompany,
     GetCompanyDetails,
-    GetAllCompanies
+    GetAllCompanies,
+    GetMyCompanies
 } from "../controllers/company.contoller.js";
 import {verifyJWT,verifyRole} from "../middlewares/auth.middleware.js";
 import {checkNotBlocked} from "../middlewares/admin.middleware.js";
+
+import { upload } from "../middlewares/Multer.middleware.js";
 
 const router=Router();
 
 // Public routes (no authentication required)
 router.route("/").get(GetAllCompanies);
+
+// Protected route for company dashboard - only returns user's companies
+router.route("/my").get(verifyJWT,checkNotBlocked,GetMyCompanies);
+
+// Public route for viewing a single company profile
 router.route("/:companyId").get(GetCompanyDetails);
 
-// Protected routes (authentication required + not blocked + COMPANY role for registration)
 // Only COMPANY users can register companies
 router.route("/register").post(verifyJWT,checkNotBlocked,verifyRole("COMPANY"),RegisterCompany);
 
 // Update/Withdraw - authorization checked in controller (founders or admin)
-router.route("/:companyId/update").patch(verifyJWT,checkNotBlocked,UpdateCompanyDetails);
+router.route("/:companyId/update").patch(
+    verifyJWT,
+    checkNotBlocked,
+    upload.single("Logo"),
+    UpdateCompanyDetails
+);
 router.route("/:companyId/withdraw").delete(verifyJWT,checkNotBlocked,WithdrawCompany);
 
 export default router;

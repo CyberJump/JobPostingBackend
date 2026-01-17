@@ -264,6 +264,64 @@ const GetAllJobs=asynchandler(async(req,res)=>{
         ];
     }
 
+    // Date filtering logic
+    const { includeExpired } = req.query;
+    const currentDate = new Date();
+    
+    // Determine user role safely (default to GUEST/STUDENT if not logged in)
+    const userRole = req.user?.role || "STUDENT";
+
+    // Automatic filtering for COMPANY users to see their own jobs
+    // If user is COMPANY and not explicitly searching/filtering by status, default to their own jobs
+    if(userRole === "COMPANY" && !status && !search && !jobType) {
+         matchStage.createdBy = req.user._id;
+    }
+
+    // Students and Guests can NEVER see expired jobs
+    if (userRole === "STUDENT") {
+        matchStage.$or = [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: null },
+            { applicationDeadline: { $gte: currentDate } }
+        ];
+        // Merge with search if it exists
+        if(search) {
+            matchStage.$and = [
+                { $or: [
+                    {title:{$regex:search,$options:'i'}},
+                    {description:{$regex:search,$options:'i'}}
+                ]},
+                { $or: [
+                    { applicationDeadline: { $exists: false } },
+                    { applicationDeadline: null },
+                    { applicationDeadline: { $gte: currentDate } }
+                ]}
+            ];
+            delete matchStage.$or; // Removed top-level $or to avoid conflict
+        }
+    } 
+    // Companies/Admins filter by default, unless includeExpired is strictly 'true'
+    else if (includeExpired !== 'true') {
+        const dateFilter = [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: null },
+            { applicationDeadline: { $gte: currentDate } }
+        ];
+
+        if(search) {
+            matchStage.$and = [
+                { $or: [
+                    {title:{$regex:search,$options:'i'}},
+                    {description:{$regex:search,$options:'i'}}
+                ]},
+                { $or: dateFilter }
+            ];
+            delete matchStage.$or;
+        } else {
+            matchStage.$or = dateFilter;
+        }
+    }
+
     // Build sort stage
     let sortStage={};
     switch(sortBy){

@@ -6,23 +6,28 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
-const RegisterUser=asynchandler(async(req,res)=>{
-    const {name,email,username,password}=req.body;
-    if(!name || !email || !username || !password){
-        throw new ApiError(400,"All fields are required");
+const RegisterUser = asynchandler(async (req, res) => {
+    const { name, email, username, password, role, companyId } = req.body;
+    
+    if (!name || !email || !username || !password) {
+        throw new ApiError(400, "All fields are required");
     }
-    const user=await User.findOne({email});
-    if(user){
-        throw new ApiError(400,"User already exists");
+    
+    const userExists = await User.findOne({
+        $or: [{ email }, { username }]
+    });
+
+    if (userExists) {
+        throw new ApiError(400, "User with email or username already exists");
     }
-    const profileImagePath=req.file?.path;
+
+    const profileImagePath = req.file?.path;
     let profileImageUrl;
-    if(!profileImagePath){
-        profileImageUrl="https://res.cloudinary.com/djgacxxqf/image/upload/v1768371178/a309ed3530e0f365781d8c2607ac4e7e_xs8f5m.jpg";
-    }
-    else{
-        const profileImage=await uploadOnCloudinary(profileImagePath);
-        if(!profileImage){
+    if (!profileImagePath) {
+        profileImageUrl = "https://res.cloudinary.com/djgacxxqf/image/upload/v1768371178/a309ed3530e0f365781d8c2607ac4e7e_xs8f5m.jpg";
+    } else {
+        const profileImage = await uploadOnCloudinary(profileImagePath);
+        if (!profileImage) {
             throw new ApiError(500, "Failed to upload profile image");
         }
         profileImageUrl = profileImage.url;
@@ -33,17 +38,19 @@ const RegisterUser=asynchandler(async(req,res)=>{
         email,
         username,
         password,
-        profileImage: profileImageUrl
+        role: role || "STUDENT",
+        profilePicture: profileImageUrl, // Fixed field name inconsistency (profileImage -> profilePicture in model)
+        status: "PENDING"
     });
 
-    const createdUser = await User.findById(newUser._id).select("-password");
+    const createdUser = await User.findById(newUser._id).select("-password -refreshToken");
 
-    if(!createdUser ){
+    if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user");
     }
 
     return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registered successfully")
+        new ApiResponse(201, { user: createdUser, companyId }, "User registered successfully")
     );
 });
 
