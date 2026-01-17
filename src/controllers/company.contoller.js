@@ -21,6 +21,7 @@ const RegisterCompany=asynchandler(async(req,res)=>{
     }
     
     // Create company with the current user as founder
+    // Status defaults to PENDING per model definition (requires admin approval)
     const company=await Company.create({
         name,
         email,
@@ -29,8 +30,7 @@ const RegisterCompany=asynchandler(async(req,res)=>{
         Logo:Logo || undefined,
         founders:[{
             userId:req.user._id
-        }],
-        status:"ACTIVE"
+        }]
     });
     
     const createdCompany=await Company.findById(company._id)
@@ -150,6 +150,11 @@ const GetCompanyDetails=asynchandler(async(req,res)=>{
         throw new ApiError(404,"Company not found");
     }
     
+    // Hide BLOCKED companies from public view
+    if(company.status==="BLOCKED"){
+        throw new ApiError(404,"Company not found");
+    }
+    
     return res.status(200).json(
         new ApiResponse(200,company,"Company details fetched successfully")
     );
@@ -167,6 +172,9 @@ const GetAllCompanies=asynchandler(async(req,res)=>{
             throw new ApiError(400,"Invalid status. Must be ACTIVE, PENDING, or BLOCKED");
         }
         matchStage.status=status;
+    } else {
+        // By default, exclude BLOCKED companies from public view
+        matchStage.status={$ne:"BLOCKED"};
     }
     
     // Search by name or description
@@ -186,7 +194,7 @@ const GetAllCompanies=asynchandler(async(req,res)=>{
                 from:'users',
                 localField:'founders.userId',
                 foreignField:'_id',
-                as:'founderDetails'
+                as:'populatedFounders'
             }
         },
         {
@@ -194,10 +202,9 @@ const GetAllCompanies=asynchandler(async(req,res)=>{
                 from:'users',
                 localField:'approvedBy',
                 foreignField:'_id',
-                as:'approvedBy'
+                as:'approvedByDetails'
             }
         },
-        {$unwind:{path:'$approvedBy',preserveNullAndEmptyArrays:true}},
         {
             $project:{
                 name:1,
@@ -208,14 +215,35 @@ const GetAllCompanies=asynchandler(async(req,res)=>{
                 status:1,
                 createdAt:1,
                 updatedAt:1,
-                founders:1,
-                'founderDetails._id':1,
-                'founderDetails.name':1,
-                'founderDetails.email':1,
-                'founderDetails.username':1,
-                'approvedBy._id':1,
-                'approvedBy.name':1,
-                'approvedBy.email':1
+                approvedBy: { $arrayElemAt: ["$approvedByDetails", 0] },
+                founders: {
+                    $map: {
+                        input: "$founders",
+                        as: "f",
+                        in: {
+                            userId: {
+                                $arrayElemAt: [
+                                    {
+                                        $filter: {
+                                            input: "$populatedFounders",
+                                            as: "pf",
+                                            cond: { $eq: ["$$pf._id", "$$f.userId"] }
+                                        }
+                                    },
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                "founders.userId.password": 0,
+                "founders.userId.refreshToken": 0,
+                "approvedBy.password": 0,
+                "approvedBy.refreshToken": 0
             }
         }
     ]);

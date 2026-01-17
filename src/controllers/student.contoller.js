@@ -1,7 +1,7 @@
 import { asynchandler } from "../utils/asynchandler.js";
 import {ApiError} from "../utils/ApiError.js";
 import {User} from "../models/user.models.js";
-import {DeletefromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import {DeletefromCloudinary, uploadDocumentOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import {Student} from "../models/student.models.js";
@@ -29,7 +29,7 @@ const CreateStudentProfile=asynchandler(async(req,res)=>{
     }
 
     // Upload verification document to Cloudinary
-    const verificationDoc=await uploadOnCloudinary(verificationDocPath);
+    const verificationDoc=await uploadDocumentOnCloudinary(verificationDocPath);
     
     if(!verificationDoc){
         throw new ApiError(500,"Failed to upload verification document");
@@ -89,7 +89,7 @@ const UpdateStudentDetails=asynchandler(async(req,res)=>{
     
     if(verificationDocPath){
         // Upload new verification document
-        const verificationDoc=await uploadOnCloudinary(verificationDocPath);
+        const verificationDoc=await uploadDocumentOnCloudinary(verificationDocPath);
         
         if(!verificationDoc){
             throw new ApiError(500,"Failed to upload verification document");

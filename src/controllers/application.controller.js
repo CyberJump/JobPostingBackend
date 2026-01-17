@@ -5,9 +5,10 @@ import mongoose, {isValidObjectId} from "mongoose";
 import {Application} from "../models/application.models.js";
 import {Job} from "../models/job.models.js";
 import {Company} from "../models/company.models.js";
+import {uploadDocumentOnCloudinary} from "../utils/cloudinary.js";
 
 const SubmitApplication=asynchandler(async(req,res)=>{
-    const {jobId,resumeUrl,additionalDocuments}=req.body;
+    const {jobId,additionalDocuments}=req.body;
     
     // Validate required fields
     if(!jobId){
@@ -23,6 +24,11 @@ const SubmitApplication=asynchandler(async(req,res)=>{
     
     if(!job){
         throw new ApiError(404,"Job not found");
+    }
+    
+    // Check if company is BLOCKED
+    if(job.company?.status==="BLOCKED"){
+        throw new ApiError(400,"This job posting is no longer available");
     }
     
     if(job.status!=="ACTIVE"){
@@ -42,6 +48,15 @@ const SubmitApplication=asynchandler(async(req,res)=>{
     
     if(existingApplication){
         throw new ApiError(400,"You have already applied for this job");
+    }
+    
+    // Upload resume to Cloudinary if file is provided
+    let resumeUrl = null;
+    if(req.file){
+        const uploadResult = await uploadDocumentOnCloudinary(req.file.path);
+        if(uploadResult){
+            resumeUrl = uploadResult.secure_url || uploadResult.url;
+        }
     }
     
     // Create application
@@ -230,6 +245,12 @@ const GetUserApplications=asynchandler(async(req,res)=>{
             }
         },
         {$unwind:{path:'$company',preserveNullAndEmptyArrays:true}},
+        // Filter out BLOCKED companies
+        {
+            $match:{
+                'company.status':{$ne:'BLOCKED'}
+            }
+        },
         {
             $project:{
                 status:1,
@@ -275,11 +296,16 @@ const GetApplicationStatus=asynchandler(async(req,res)=>{
     // Find application and populate related data
     const application=await Application.findById(applicationId)
         .populate('job','title description location salary jobType status applicationDeadline')
-        .populate('company','name email description website Logo')
+        .populate('company','name email description website Logo status')
         .populate('student','name email username profilePicture')
         .populate('reviewedBy','name email');
     
     if(!application){
+        throw new ApiError(404,"Application not found");
+    }
+    
+    // Check if company is BLOCKED
+    if(application.company?.status==="BLOCKED"){
         throw new ApiError(404,"Application not found");
     }
     

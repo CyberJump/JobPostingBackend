@@ -1,8 +1,8 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose from "mongoose";
 
-const companyInviteSchema=new Schema({
+const companyInviteSchema=new mongoose.Schema({
     companyId:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"Company",
         required:true,
     },
@@ -16,7 +16,7 @@ const companyInviteSchema=new Schema({
         default:"PENDING",
     },
     invitedBy:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:true,
     },

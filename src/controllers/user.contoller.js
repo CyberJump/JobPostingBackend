@@ -50,8 +50,8 @@ const RegisterUser=asynchandler(async(req,res)=>{
 const generateAccessandRefreshToken=async(userId)=>{
     try{
         const user=await User.findById(userId);
-        const accessToken=user.generateAccessToken();
-        const refreshToken=user.generateRefreshToken();
+        const accessToken = await user.generateAccessToken();
+        const refreshToken = await user.generateRefreshToken();
         user.refreshToken=refreshToken;
         await user.save({ validateBeforeSave: false });
         return {accessToken,refreshToken};
@@ -74,9 +74,12 @@ const LoginUser=asynchandler(async(req,res)=>{
         throw new ApiError(400,"Incorrect password");
     }
     const {accessToken,refreshToken}=await generateAccessandRefreshToken(user._id);
-    const options={
-        httpOnly:true,
-        secure:true}
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax"
+    }
+    
     const LoggedinUser=await User.findById(user._id).select("-password -refreshToken");
     res.status(200)
     .cookie("accessToken",accessToken,options)
@@ -92,9 +95,11 @@ const LogoutUser=asynchandler(async(req,res)=>{
         $set:{refreshToken:undefined}},
         {new:true}
     );
-    const options={
-        httpOnly:true,
-        secure:true,}
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax"
+    }
     return res.status(200).
     clearCookie("accessToken",options).
     clearCookie("refreshToken",options).
@@ -103,9 +108,9 @@ const LogoutUser=asynchandler(async(req,res)=>{
 
 const RefreshAccessToken=asynchandler(async(req,res)=>{
     const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken;
-    
+    console.log(incomingRefreshToken);
     if(!incomingRefreshToken){
-        throw new ApiError(401,"Unauthorized request");
+        throw new ApiError(401,"Refresh token is required");
     }
 
     try{
@@ -123,9 +128,10 @@ const RefreshAccessToken=asynchandler(async(req,res)=>{
 
         const {accessToken,refreshToken:newRefreshToken}=await generateAccessandRefreshToken(user._id);
 
-        const options={
-            httpOnly:true,
-            secure:true
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax"
         }
 
         return res.status(200)

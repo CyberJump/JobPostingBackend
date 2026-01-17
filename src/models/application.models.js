@@ -1,19 +1,19 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const applicationSchema=new Schema({
+const applicationSchema=new mongoose.Schema({
     job:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"Job",
         required:true,
     },
     student:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:true,
     },
     company:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"Company",
         required:true,
     },
@@ -32,7 +32,7 @@ const applicationSchema=new Schema({
         type:String,
     },
     reviewedBy:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
     },
     

@@ -210,10 +210,15 @@ const GetJobDetails=asynchandler(async(req,res)=>{
 
     // Find job and populate related data
     const job=await Job.findById(jobId)
-        .populate('company','name email description website Logo')
+        .populate('company','name email description website Logo status')
         .populate('createdBy','name email username');
     
     if(!job){
+        throw new ApiError(404,"Job posting not found");
+    }
+    
+    // Check if company is BLOCKED
+    if(job.company?.status==="BLOCKED"){
         throw new ApiError(404,"Job posting not found");
     }
 
@@ -300,6 +305,13 @@ const GetAllJobs=asynchandler(async(req,res)=>{
             }
         },
         {$unwind:{path:'$createdBy',preserveNullAndEmptyArrays:true}},
+        // Filter out BLOCKED companies and users
+        {
+            $match:{
+                'company.status':{$ne:'BLOCKED'},
+                'createdBy.status':{$ne:'BLOCKED'}
+            }
+        },
         {
             $project:{
                 title:1,

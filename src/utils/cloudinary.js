@@ -9,13 +9,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Upload images (auto resource type)
 const uploadOnCloudinary=async (localFilePath)=>{
     try{
         if(!localFilePath){
             return null;
         }
         const response=await cloudinary.uploader.upload(localFilePath,{resource_type:"auto"});
-        // console.log("Cloudinary upload response:", response.url);
         console.log("Cloudinary Uploaded successfully");
         fs.unlinkSync(localFilePath);
         return response;
@@ -26,12 +26,35 @@ const uploadOnCloudinary=async (localFilePath)=>{
     }
 }
 
-const DeletefromCloudinary=async (publicid)=>{
+// Upload documents (PDF, DOC, etc.) with raw resource type for public access
+const uploadDocumentOnCloudinary=async (localFilePath)=>{
+    try{
+        if(!localFilePath){
+            return null;
+        }
+        const response=await cloudinary.uploader.upload(localFilePath,{
+            resource_type: "raw",
+            folder: "resumes",
+            access_mode: "public"
+        });
+        console.log("Cloudinary Document Uploaded successfully");
+        fs.unlinkSync(localFilePath);
+        return response;
+    }catch(error){
+        if(fs.existsSync(localFilePath)){
+            fs.unlinkSync(localFilePath);
+        }
+        console.error("Cloudinary document upload error:", error);
+        return null;
+    }
+}
+
+const DeletefromCloudinary=async (publicid, resourceType = "image")=>{
     try{
         if(!publicid){
             return null
         }
-        const response=await cloudinary.uploader.destroy(publicid);
+        const response=await cloudinary.uploader.destroy(publicid, { resource_type: resourceType });
         console.log("File deleted from cloudinary");
         return response
     }catch(err){
@@ -39,5 +62,6 @@ const DeletefromCloudinary=async (publicid)=>{
         return null;
     }
 }
-export {uploadOnCloudinary,DeletefromCloudinary};
+export {uploadOnCloudinary, uploadDocumentOnCloudinary, DeletefromCloudinary};
+
 

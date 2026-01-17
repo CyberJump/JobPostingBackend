@@ -25,6 +25,11 @@ const SendFounderInvite=asynchandler(async(req,res)=>{
         throw new ApiError(404,"Company not found");
     }
     
+    // Check if company is BLOCKED
+    if(company.status==="BLOCKED"){
+        throw new ApiError(403,"This company is blocked and cannot send invites");
+    }
+    
     // Authorization: Only existing founders can send invites
     const isFounder=company.founders?.some(
         founder=>founder.userId?._id?.toString()===req.user._id.toString()
@@ -39,6 +44,11 @@ const SendFounderInvite=asynchandler(async(req,res)=>{
     
     if(!invitedUser){
         throw new ApiError(404,"User with this email not found");
+    }
+    
+    // Check if user is BLOCKED
+    if(invitedUser.status==="BLOCKED"){
+        throw new ApiError(400,"Cannot send invite to a blocked user");
     }
     
     // Check if user is already a founder
@@ -129,6 +139,9 @@ const AcceptFounderInvite=asynchandler(async(req,res)=>{
         {new:true}
     ).populate('founders.userId','name email username profilePicture');
     
+    // Update user role to COMPANY
+    await User.findByIdAndUpdate(req.user._id, { role: "COMPANY" });
+
     // Update invite status to accepted
     await CompanyInvite.findByIdAndUpdate(inviteId,{status:"ACCEPTED"});
     

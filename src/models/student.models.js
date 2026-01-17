@@ -1,9 +1,9 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const studentSchema=new Schema({
+const studentSchema=new mongoose.Schema({
     userId:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:true,
     },
@@ -24,13 +24,13 @@ const studentSchema=new Schema({
         required:true,
     },
     approvedBy:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
     },
     status:{
         type:String,
-        enum:["ACTIVE","PENDING","BLOCKED"],
-        default:"ACTIVE",
+        enum:["PENDING","VERIFIED","REJECTED","BLOCKED"],
+        default:"PENDING",
     }
 
 },{timestamps:true})

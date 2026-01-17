@@ -1,8 +1,8 @@
-import mongoose,{schema} from "mongoose";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-const userSchema=new schema({
+const userSchema=new mongoose.Schema({
     name:{
         type:String,
         required:true,
@@ -41,7 +41,7 @@ const userSchema=new schema({
     status:{
         type:String,
         enum:["ACTIVE","PENDING","BLOCKED"],
-        default:"ACTIVE",
+        default:"PENDING",
     },
     refreshToken:{
         type:String,

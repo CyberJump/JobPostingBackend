@@ -1,14 +1,14 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const jobSchema=new Schema({
+const jobSchema=new mongoose.Schema({
     title:{
         type:String,
         required:true,
         trim:true
     },
     company:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"Company",
         required:true,
     },
@@ -30,7 +30,7 @@ const jobSchema=new Schema({
         default:"ACTIVE",
     },
     createdBy:{
-        type:mongoose.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:true,
     },

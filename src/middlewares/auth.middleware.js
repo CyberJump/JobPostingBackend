@@ -5,7 +5,7 @@ import { User } from "../models/user.models.js";
 
 export const verifyJWT=asynchandler(async(req, _,next)=>{
     try {
-        const token=req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer","");
+        const token=req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ","");
         if(!token){
             throw new ApiError(401,"Unauthorized access,token missing");
         }
@@ -24,12 +24,16 @@ export const verifyJWT=asynchandler(async(req, _,next)=>{
     }
 });
 
-export const verifyRole=(role)=>asynchandler(async(req,_,next)=>{
+export const verifyRole=(allowedRoles)=>asynchandler(async(req,_,next)=>{
    const user_role=req.role;
-   if(!role){
+   if(!allowedRoles){
     throw new ApiError(401,"Unauthorized access,role missing");
-   } 
-   if(user_role!==role){
+   }
+   
+   // Handle both single role string and array of roles
+   const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+   
+   if(!rolesArray.includes(user_role)){
     throw new ApiError(401,"Unauthorized access,role mismatch");
    }
    next();
