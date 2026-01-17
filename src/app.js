@@ -29,6 +29,29 @@ import studentRoutes from "./routes/student.routes.js";
 import verificationRoutes from "./routes/verification.routes.js";
 
 // Register routes
+
+// Health check route
+app.get("/api/v1", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "BusinessClinic API is running",
+        version: "1.0.0",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get("/api/v1/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        status: "healthy",
+        message: "BusinessClinic API is running",
+        version: "1.0.0",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.use("/api/v1/users",userRoutes);
 app.use("/api/v1/jobs",jobRoutes);
 app.use("/api/v1/applications",applicationRoutes);
