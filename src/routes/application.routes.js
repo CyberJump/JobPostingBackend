@@ -9,7 +9,7 @@ import {
 } from "../controllers/application.controller.js";
 import {verifyJWT,verifyRole} from "../middlewares/auth.middleware.js";
 import {checkNotBlocked} from "../middlewares/admin.middleware.js";
-import {upload} from "../middlewares/Multer.middleware.js";
+import {upload} from "../middlewares/multer.middleware.js";
 
 const router=Router();
 
