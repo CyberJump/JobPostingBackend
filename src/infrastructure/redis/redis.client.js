@@ -29,21 +29,30 @@ export const getRedisClient = () => {
 
         redisClient.on("connect", () => {
             isReady = true;
+            console.log("Redis TCP connection established");
             logger.info({ prefix: config.redis.keyPrefix }, "Redis client connected successfully");
         });
 
         redisClient.on("ready", () => {
             isReady = true;
+            console.log("Redis client ready");
         });
 
         redisClient.on("error", (err) => {
             isReady = false;
+            console.error("Redis infrastructure connection error:", err);
             logger.error({ err: err.message }, "Redis infrastructure connection error");
         });
 
         redisClient.on("close", () => {
             isReady = false;
+            console.log("Redis connection closed");
             logger.warn("Redis connection closed");
+        });
+
+        redisClient.on("reconnecting", () => {
+            console.log("Redis reconnecting...");
+            logger.warn("Redis reconnecting...");
         });
 
         // Trigger connection asynchronously
