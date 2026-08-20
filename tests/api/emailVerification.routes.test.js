@@ -17,8 +17,17 @@ describe("Email Verification Routes API Endpoints (/api/v1/auth/email-verificati
         const mockQuery = (val) => ({
             exec: jest.fn().mockResolvedValue(val),
         });
-        jest.spyOn(User, "findOne").mockReturnValue(mockQuery({ _id: "507f1f77bcf86cd799439011", email: "user@example.com" }));
-        jest.spyOn(User, "findByIdAndUpdate").mockReturnValue(mockQuery({ _id: "507f1f77bcf86cd799439011", isVerified: true, status: "ACTIVE" }));
+        jest.spyOn(User, "findOne").mockReturnValue(mockQuery({ 
+            _id: "507f1f77bcf86cd799439011", 
+            email: "user@example.com", 
+            isVerified: false, 
+            status: "PENDING" 
+        }));
+        jest.spyOn(User, "findByIdAndUpdate").mockReturnValue(mockQuery({ 
+            _id: "507f1f77bcf86cd799439011", 
+            isVerified: true, 
+            status: "ACTIVE" 
+        }));
     });
 
     afterEach(() => {
