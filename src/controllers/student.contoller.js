@@ -6,6 +6,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import {Student} from "../models/student.models.js";
 
+import { VerificationApplication } from "../models/verificationApplication.models.js";
+
 const CreateStudentProfile=asynchandler(async(req,res)=>{
     // Check if student profile already exists
     const existingProfile=await Student.findOne({userId:req.user._id});
@@ -44,6 +46,25 @@ const CreateStudentProfile=asynchandler(async(req,res)=>{
         verificationDocument:verificationDoc.url,
         status:"PENDING"
     });
+
+    // Auto-create VerificationApplication entry for the Admin Verification Audit queue
+    try {
+        await VerificationApplication.findOneAndUpdate(
+            { userId: req.user._id, status: "PENDING" },
+            {
+                $set: {
+                    applicantType: "STUDENT",
+                    userId: req.user._id,
+                    studentProfileId: studentProfile._id,
+                    status: "PENDING",
+                },
+            },
+            { upsert: true, new: true }
+        );
+    } catch (verifErr) {
+        // Non-blocking log
+        console.warn("Failed to create VerificationApplication document:", verifErr.message);
+    }
 
     const createdProfile=await Student.findById(studentProfile._id).populate('userId','name email username profilePicture');
 

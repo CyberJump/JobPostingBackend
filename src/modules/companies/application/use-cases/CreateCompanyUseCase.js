@@ -1,4 +1,5 @@
 import { AppError } from "../../../../shared/errors/AppError.js";
+import { VerificationApplication } from "../../../../models/verificationApplication.models.js";
 
 export class CreateCompanyUseCase {
     constructor(companyRepository) {
@@ -30,6 +31,24 @@ export class CreateCompanyUseCase {
 
         if (!createdCompany) {
             throw new AppError(500, "Failed to register company");
+        }
+
+        // Auto-create VerificationApplication entry for the Admin Verification Audit queue
+        try {
+            await VerificationApplication.findOneAndUpdate(
+                { userId, companyId: createdCompany._id, status: "PENDING" },
+                {
+                    $set: {
+                        applicantType: "COMPANY",
+                        userId,
+                        companyId: createdCompany._id,
+                        status: "PENDING",
+                    },
+                },
+                { upsert: true, new: true }
+            );
+        } catch (verifErr) {
+            console.warn("Failed to auto-create VerificationApplication document for company:", verifErr.message);
         }
 
         return createdCompany;
