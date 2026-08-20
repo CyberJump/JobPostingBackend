@@ -25,7 +25,28 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps, curl, postman, health probes)
         if (!origin) return callback(null, true);
-        if (config.cors.allowedOrigins.includes(origin)) {
+
+        const cleanOrigin = String(origin).trim().replace(/\/$/, "");
+
+        const isAllowed = config.cors.allowedOrigins.some((allowed) => {
+            const cleanAllowed = String(allowed).trim().replace(/\/$/, "");
+            if (cleanAllowed === "*" || cleanAllowed === cleanOrigin) {
+                return true;
+            }
+            if (cleanAllowed.includes("*")) {
+                const regexPattern = new RegExp(
+                    "^" + cleanAllowed.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$"
+                );
+                return regexPattern.test(cleanOrigin);
+            }
+            // Allow any vercel deployment for this frontend project
+            if (cleanOrigin.includes("job-posting-frontend") && cleanOrigin.endsWith(".vercel.app")) {
+                return true;
+            }
+            return false;
+        });
+
+        if (isAllowed) {
             return callback(null, true);
         }
         return callback(new Error("CORS policy violation: Origin not allowed"), false);

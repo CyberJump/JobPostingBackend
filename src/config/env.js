@@ -14,7 +14,7 @@ const envSchema = z.object({
     CLOUDINARY_CLOUD_NAME: z.string({ required_error: "CLOUDINARY_CLOUD_NAME is required" }),
     CLOUDINARY_API_KEY: z.string({ required_error: "CLOUDINARY_API_KEY is required" }),
     CLOUDINARY_API_SECRET: z.string({ required_error: "CLOUDINARY_API_SECRET is required" }),
-    ALLOWED_ORIGINS: z.string().optional().default("http://localhost:3000,http://localhost:5173"),
+    ALLOWED_ORIGINS: z.string().optional().default("http://localhost:3000,http://localhost:5173,https://job-posting-frontend-sigma.vercel.app"),
     REDIS_ENABLED: z.string().optional().transform((val) => val === "true" || val === undefined).default("true"),
     REDIS_URL: z.string().optional().default("redis://localhost:6379"),
     REDIS_KEY_PREFIX: z.string().optional().default("bc_api"),
@@ -55,7 +55,9 @@ export const config = {
         apiSecret: env.CLOUDINARY_API_SECRET,
     },
     cors: {
-        allowedOrigins: env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(",") : ["http://localhost:3000"],
+        allowedOrigins: env.ALLOWED_ORIGINS
+            ? env.ALLOWED_ORIGINS.split(",").map((o) => o.trim().replace(/\/$/, "")).filter(Boolean)
+            : ["http://localhost:3000", "http://localhost:5173", "https://job-posting-frontend-sigma.vercel.app"],
     },
     redis: {
         enabled: env.NODE_ENV === "test" ? (process.env.REDIS_ENABLED === "true") : (env.REDIS_ENABLED !== false),

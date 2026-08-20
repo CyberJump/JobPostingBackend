@@ -12,6 +12,16 @@ describe("CORS Security Middleware Verification", () => {
         expect(response.headers["access-control-allow-credentials"]).toBe("true");
     });
 
+    it("should allow requests from production Vercel frontend deployment", async () => {
+        const response = await request(app)
+            .get("/api/v1/health")
+            .set("Origin", "https://job-posting-frontend-sigma.vercel.app");
+        
+        expect(response.status).toBe(200);
+        expect(response.headers["access-control-allow-origin"]).toBe("https://job-posting-frontend-sigma.vercel.app");
+        expect(response.headers["access-control-allow-credentials"]).toBe("true");
+    });
+
     it("should allow requests with no Origin header (server-to-server / curl / health check)", async () => {
         const response = await request(app).get("/api/v1/health");
         expect(response.status).toBe(200);
