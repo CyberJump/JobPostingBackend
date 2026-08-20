@@ -9,6 +9,11 @@ export class RequestOtpUseCase {
         }
 
         const otp = otpService.generateOtp();
+
+        if (process.env.NODE_ENV === "development") {
+            console.log(`🔑 [OTP GENERATED] Email: ${email} | Purpose: ${purpose} | OTP: ${otp}`);
+        }
+
         const storeResult = await otpService.storeOtp(purpose, email, otp, 600, 60);
 
         if (!storeResult.success) {

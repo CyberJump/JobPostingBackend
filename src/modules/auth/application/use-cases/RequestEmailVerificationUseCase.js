@@ -41,6 +41,11 @@ export class RequestEmailVerificationUseCase {
 
         // Generate cryptographic 6-digit OTP
         const otp = otpService.generateOtp();
+
+        if (process.env.NODE_ENV === "development") {
+            console.log(`🔑 [OTP GENERATED] Email: ${normalizedEmail} | OTP: ${otp}`);
+        }
+
         const storeResult = await otpService.storeOtp("email_verification", normalizedEmail, otp, 600, 60);
 
         if (!storeResult.success) {

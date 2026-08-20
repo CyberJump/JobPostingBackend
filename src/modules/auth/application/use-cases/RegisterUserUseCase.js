@@ -11,7 +11,11 @@ export class RegisterUserUseCase {
             throw new AppError(400, "All fields are required");
         }
 
-        const existingUser = await this.identityRepository.findByEmailOrUsername(email, username);
+        const normalizedName = name.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedUsername = username.trim().toLowerCase();
+
+        const existingUser = await this.identityRepository.findByEmailOrUsername(normalizedEmail, normalizedUsername);
         if (existingUser) {
             throw new AppError(400, "User with email or username already exists");
         }
@@ -26,9 +30,9 @@ export class RegisterUserUseCase {
         }
 
         const newUser = await this.identityRepository.create({
-            name,
-            email,
-            username,
+            name: normalizedName,
+            email: normalizedEmail,
+            username: normalizedUsername,
             password,
             role: role || "STUDENT",
             profilePicture: profileImageUrl,

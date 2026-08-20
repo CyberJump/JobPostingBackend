@@ -14,9 +14,9 @@ if (config.email && config.email.host && config.email.user && !isPlaceholderUser
         host: config.email.host,
         port: config.email.port || 587,
         secure: config.email.port === 465,
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 5000,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
         auth: {
             user: config.email.user,
             pass: config.email.pass,
@@ -27,6 +27,10 @@ if (config.email && config.email.host && config.email.user && !isPlaceholderUser
 export const emailPort = {
     async sendEmail({ to, subject, html, text }) {
         logger.info({ to, subject }, "Email dispatch port invoked");
+
+        if (config.env === "development") {
+            console.log(`📧 [EMAIL DISPATCH] To: ${to} | Subject: ${subject}`);
+        }
 
         if (transporter && config.env !== "test") {
             try {
@@ -39,9 +43,15 @@ export const emailPort = {
                 });
 
                 logger.info({ messageId: info.messageId, to }, "Email sent successfully via Nodemailer SMTP");
+                if (config.env === "development") {
+                    console.log(`✅ [EMAIL SENT] MessageId: ${info.messageId} to ${to}`);
+                }
                 return { success: true, messageId: info.messageId };
             } catch (error) {
                 logger.error({ error: error.message, to, subject }, "Nodemailer dispatch failed, falling back to mock logger");
+                if (config.env === "development") {
+                    console.error(`⚠️ [EMAIL FAILED] Nodemailer error: ${error.message}`);
+                }
                 return { success: true, messageId: `msg_fallback_${Date.now()}` };
             }
         }
