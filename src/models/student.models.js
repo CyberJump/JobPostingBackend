@@ -33,7 +33,10 @@ const studentSchema=new mongoose.Schema({
         default:"PENDING",
     }
 
-},{timestamps:true})
+},{timestamps:true});
+
+studentSchema.index({ userId: 1 }, { unique: true });
+studentSchema.index({ status: 1 });
 
 studentSchema.plugin(mongooseAggregatePaginate);
 

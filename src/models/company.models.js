@@ -35,6 +35,9 @@ const companySchema=new mongoose.Schema({
     }
 },{timestamps:true});
 
+companySchema.index({ "founders.userId": 1 });
+companySchema.index({ status: 1 });
+
 companySchema.plugin(mongooseAggregatePaginate);
 
 export const Company=mongoose.model("Company",companySchema);

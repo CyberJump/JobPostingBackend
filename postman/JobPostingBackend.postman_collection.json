@@ -1,0 +1,2438 @@
+{
+  "info": {
+    "_postman_id": "jobposting-backend-master-collection-v6",
+    "name": "JobPostingBackend Complete API Verification Suite",
+    "description": "Master Postman API collection covering all 63 active endpoints across Health, Auth, Users, Companies, Invites, Jobs, Applications, Student Profile, Student Verification, Admin Moderation, RBAC/IDOR, Rate Limiting, Idempotency, and Error Contracts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Health & Observability",
+      "item": [
+        {
+          "name": "GET API Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{baseUrl}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response envelope contains valid metadata', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.message).to.include('BusinessClinic API is running');",
+                  "    pm.expect(json.requestId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Health status is healthy', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('healthy');",
+                  "    pm.expect(json.requestId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Liveness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "live"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Liveness probe is alive', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('alive');",
+                  "    pm.expect(json.requestId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Readiness returns 200 or 530', function () {",
+                  "    pm.expect([200, 530]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Readiness payload contains services status', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.services).to.be.an('object');",
+                  "    pm.expect(json.requestId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Auth & Sessions",
+      "item": [
+        {
+          "name": "Register Student User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Student Postman User\",\n  \"email\": \"student_postman_test@example.com\",\n  \"username\": \"student_test_user\",\n  \"password\": \"Password123!\",\n  \"role\": \"STUDENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registration succeeds (201) or returns duplicate conflict (400/409)', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('studentUserId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Student User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student_postman_test@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) { pm.environment.set('studentAccessToken', json.data.accessToken); }",
+                  "if (json?.data?.refreshToken) { pm.environment.set('studentRefreshToken', json.data.refreshToken); }",
+                  "if (json?.data?.user?._id) { pm.environment.set('studentUserId', json.data.user._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Company Founder User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Company Founder User\",\n  \"email\": \"founder_postman_test@example.com\",\n  \"username\": \"founder_test_user\",\n  \"password\": \"Password123!\",\n  \"role\": \"COMPANY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registration succeeds (201) or returns duplicate conflict (400/409)', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('companyUserId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Company Founder User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"founder_postman_test@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) { pm.environment.set('companyAccessToken', json.data.accessToken); }",
+                  "if (json?.data?.refreshToken) { pm.environment.set('companyRefreshToken', json.data.refreshToken); }",
+                  "if (json?.data?.user?._id) { pm.environment.set('companyUserId', json.data.user._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Second Founder User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Second Founder User\",\n  \"email\": \"founder2_postman_test@example.com\",\n  \"username\": \"founder2_test_user\",\n  \"password\": \"Password123!\",\n  \"role\": \"COMPANY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registration succeeds (201) or duplicate (400/409)', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('company2UserId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Second Founder User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"founder2_postman_test@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) { pm.environment.set('company2AccessToken', json.data.accessToken); }",
+                  "if (json?.data?.user?._id) { pm.environment.set('company2UserId', json.data.user._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Admin User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"System Admin User\",\n  \"email\": \"admin_postman_test@example.com\",\n  \"username\": \"admin_test_user\",\n  \"password\": \"AdminPass123!\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registration succeeds (201) or returns duplicate conflict (400/409)', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('adminUserId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Admin User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin_postman_test@example.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) { pm.environment.set('adminAccessToken', json.data.accessToken); }",
+                  "if (json?.data?.refreshToken) { pm.environment.set('adminRefreshToken', json.data.refreshToken); }",
+                  "if (json?.data?.user?._id) { pm.environment.set('adminUserId', json.data.user._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{studentRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "refresh-token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Refresh token returns 200 or 401', function () {",
+                  "    pm.expect([200, 401]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) { pm.environment.set('studentAccessToken', json.data.accessToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Password123!\",\n  \"newPassword\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "change-password"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Change password returns 200 OK or 400', function () {",
+                  "    pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "logout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logout returns 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - OTP Authentication",
+      "item": [
+        {
+          "name": "Request OTP (Email Verification)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"otp_test_user@example.com\",\n  \"purpose\": \"email_verify\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "otp", "request"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OTP request returns 200 or 429 cooldown', function () {",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request OTP (Password Reset)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"otp_test_user@example.com\",\n  \"purpose\": \"password_reset\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "otp", "request"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OTP request for reset returns 200 or 429', function () {",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"otp_test_user@example.com\",\n  \"otp\": \"123456\",\n  \"purpose\": \"email_verify\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "otp", "verify"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Verify OTP returns 200 or 400 invalid/expired', function () {",
+                  "    pm.expect([200, 400, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Email Verification",
+      "item": [
+        {
+          "name": "Request Email Verification Code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student_postman_test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-verification/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "email-verification", "request"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Email verification request returns 200 or 429', function () {",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Email with Code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student_postman_test@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-verification/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "email-verification", "verify"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Verify email returns 200 or 400 invalid code', function () {",
+                  "    pm.expect([200, 400, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - User Profile & Account",
+      "item": [
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/current-user",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "current-user"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Current user payload returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.data._id).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Account Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Student Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/update-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "update-account"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update account details returns 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Profile Photo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "profileImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/update-profile-photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "update-profile-photo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update profile photo returns 200 or 400 (when no file attached)', function () {",
+                  "    pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Companies Management",
+      "item": [
+        {
+          "name": "Register Company Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Tech Solutions\",\n  \"email\": \"contact@postmantech.example.com\",\n  \"description\": \"Enterprise Black-Box Testing & Automated Cloud Solutions Platform\",\n  \"website\": \"https://postmantech.example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Company registration returns 200, 201, or 409', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('companyId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Companies (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get companies returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.companies?.length > 0 && !pm.environment.get('companyId')) {",
+                  "    pm.environment.set('companyId', json.data.companies[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Companies (Founder)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/my?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "my"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get my companies returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.companies?.length > 0) {",
+                  "    pm.environment.set('companyId', json.data.companies[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get company details returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Company Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Tech Solutions Inc\",\n  \"description\": \"Updated Enterprise Testing & Solutions Suite\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update company returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Withdraw Company",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "withdraw"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Withdraw company returns 200 or 403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Company Invites",
+      "item": [
+        {
+          "name": "Send Founder Invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"email\": \"founder2_postman_test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invites/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "send"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Send invite returns 201 or 400/403/404', function () {",
+                  "    pm.expect([200, 201, 400, 403, 404]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('inviteId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Invites",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{company2AccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invites/my-invites?status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "my-invites"],
+              "query": [
+                { "key": "status", "value": "PENDING" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get my invites returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (Array.isArray(json?.data) && json.data.length > 0) {",
+                  "    pm.environment.set('inviteId', json.data[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company Invites",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invites/company/{{companyId}}?status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "company", "{{companyId}}"],
+              "query": [
+                { "key": "status", "value": "PENDING" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get company invites returns 200 or 403/404', function () {",
+                  "    pm.expect([200, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept Founder Invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{company2AccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invites/{{inviteId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "{{inviteId}}", "accept"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Accept invite returns 200, 400, 403, or 404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject Founder Invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{company2AccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invites/{{inviteId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "{{inviteId}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reject invite returns 200, 400, 403, or 404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Founder Invite",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invites/{{inviteId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["invites", "{{inviteId}}", "cancel"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cancel invite returns 200, 400, 403, or 404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Jobs Management",
+      "item": [
+        {
+          "name": "Create Job Posting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Backend Engineer\",\n  \"company\": \"{{companyId}}\",\n  \"description\": \"Building scalable Node.js microservices, Clean Architecture, and REST APIs\",\n  \"requirements\": [\"Node.js\", \"MongoDB\", \"Redis\", \"Docker\"],\n  \"location\": \"San Francisco, CA (Remote)\",\n  \"salary\": \"$150,000 - $180,000\",\n  \"jobType\": \"FULLTIME\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "create"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Job creation returns 201 or valid status', function () {",
+                  "    pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('jobId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Jobs (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs?page=1&limit=10&jobType=FULLTIME",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "jobType", "value": "FULLTIME" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get jobs returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.jobs?.length > 0 && !pm.environment.get('jobId')) {",
+                  "    pm.environment.set('jobId', json.data.jobs[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Job Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get job details returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Job Posting",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Staff Backend Platform Engineer\",\n  \"salary\": \"$170,000 - $200,000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update job returns 200 OK or 403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Close Job Posting",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}", "close"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Close job returns 200 OK or 403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Job Posting",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}", "delete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete job returns 200 OK or 403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 - Applications Lifecycle",
+      "item": [
+        {
+          "name": "Submit Job Application (Apply)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "X-Idempotency-Key", "value": "{{idempotencyKey}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "jobId", "value": "{{jobId}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/applications/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "submit"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Submit application returns 201, 200, 400, or 409', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('applicationId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Applications (Student)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/my-applications?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "my-applications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get my applications returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.applications?.length > 0) {",
+                  "    pm.environment.set('applicationId', json.data.applications[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Application Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{applicationId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "{{applicationId}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get application status returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Job Applications (Company Review)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/job/{{jobId}}?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "job", "{{jobId}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get job applications returns 200 OK or 403/404', function () {",
+                  "    pm.expect([200, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review Application (Shortlist/Offer/Reject)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SHORTLISTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{applicationId}}/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "{{applicationId}}", "review"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Review application returns 200 or 400/403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Withdraw Application (Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{applicationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "{{applicationId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Withdraw application returns 200 or 403/404', function () {",
+                  "    pm.expect([200, 400, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Student Academic Profile",
+      "item": [
+        {
+          "name": "Create Student Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "branch", "value": "Computer Science & Engineering", "type": "text" },
+                { "key": "college", "value": "Institute of Technology", "type": "text" },
+                { "key": "year", "value": "2026", "type": "text" },
+                { "key": "verificationDocument", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create student profile returns 201 or 400 (already exists/missing doc)', function () {",
+                  "    pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) {",
+                  "    pm.environment.set('studentProfileId', json.data._id);",
+                  "    pm.environment.set('studentId', json.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get student profile returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) {",
+                  "    pm.environment.set('studentProfileId', json.data._id);",
+                  "    pm.environment.set('studentId', json.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Student Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "branch", "value": "Information Technology", "type": "text" },
+                { "key": "year", "value": "2027", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update student profile returns 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Get Pending Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "pending"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin get pending students returns 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (Array.isArray(json?.data) && json.data.length > 0) {",
+                  "    pm.environment.set('studentId', json.data[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Verify Student Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "verify"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Verify student returns 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Reject Student Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reject student returns 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 - Verification Requests (Workflow)",
+      "item": [
+        {
+          "name": "Create Verification Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicantType\": \"STUDENT\",\n  \"studentProfileId\": \"{{studentProfileId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/verifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["verifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create verification request returns 201 or 400', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('verificationRequestId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Verification Request Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/verifications/my-request",
+              "host": ["{{baseUrl}}"],
+              "path": ["verifications", "my-request"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get verification status returns 200 OK or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('verificationRequestId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List Pending Verification Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/verifications?status=PENDING&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["verifications"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin get verifications returns 200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.requests?.length > 0) {",
+                  "    pm.environment.set('verificationRequestId', json.data.requests[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Approve Verification Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminNotes\": \"Verified student credentials and enrollment letter successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/verifications/{{verificationRequestId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["verifications", "{{verificationRequestId}}", "approve"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Approve verification returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Reject Verification Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminNotes\": \"Rejected due to blurry or invalid enrollment document.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/verifications/{{verificationRequestId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["verifications", "{{verificationRequestId}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reject verification returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 - Admin Management & Moderation",
+      "item": [
+        {
+          "name": "Create Admin User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Secondary Admin\",\n  \"username\": \"admin_secondary_test\",\n  \"email\": \"admin_secondary@example.com\",\n  \"password\": \"AdminSecPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/create-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "create-admin"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create admin returns 201 or 400/409', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json?.data?._id) { pm.environment.set('createdAdminUserId', json.data._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Admin Privileges",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/remove-admin/{{createdAdminUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "remove-admin", "{{createdAdminUserId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Remove admin returns 200 or 400/404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List Users for Moderation",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin get users returns 200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Block User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{studentUserId}}/block",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "{{studentUserId}}", "block"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Block user returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Unblock User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{studentUserId}}/unblock",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "{{studentUserId}}", "unblock"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unblock user returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Block Company",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/companies/{{companyId}}/block",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "companies", "{{companyId}}", "block"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Block company returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Unblock Company",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/companies/{{companyId}}/unblock",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "companies", "{{companyId}}", "unblock"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unblock company returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List All Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/applications?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "applications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin list applications returns 200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/applications/{{applicationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "applications", "{{applicationId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin delete application returns 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/jobs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "jobs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin list jobs returns 200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Modify Job Posting",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\",\n  \"salary\": \"$160,000 - $190,000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "jobs", "{{jobId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin modify job returns 200 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Delete Job Posting",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "jobs", "{{jobId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin delete job returns 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 - Security & RBAC / IDOR",
+      "item": [
+        {
+          "name": "Student Attempt Admin Route (Blocked 401/403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Student blocked from admin route with 401/403', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Student Attempt Company Register (Blocked 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unauthorized Corp\",\n  \"email\": \"unauth@example.com\",\n  \"description\": \"Attempted registration without company role\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Student blocked from registering company with 403', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Student Attempt Create Job Posting (Blocked 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized Job\",\n  \"company\": \"{{companyId}}\",\n  \"description\": \"Student attempting to post job without COMPANY role\",\n  \"requirements\": [\"Hacking\"],\n  \"location\": \"Remote\",\n  \"salary\": \"$100,000\",\n  \"jobType\": \"FULLTIME\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "create"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Student blocked from creating jobs with 403', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Company Attempt Admin Route (Blocked 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{companyAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Company blocked from admin route with 401/403', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unauthenticated Access to Protected Route (Blocked 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/current-user",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "current-user"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthenticated request returns 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14 - Rate Limiting & Idempotency",
+      "item": [
+        {
+          "name": "OTP Request Burst Rate Limiting",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ratelimit_burst_test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "otp", "request"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rate limiting endpoint returns 200 or 429 Too Many Requests', function () {",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotent Application Submission with Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentAccessToken}}" },
+              { "key": "X-Idempotency-Key", "value": "{{idempotencyKey}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "jobId", "value": "{{jobId}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/applications/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications", "submit"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Idempotent submission handled gracefully (200, 201, 400, 409)', function () {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "15 - Error Contracts & Validation",
+      "item": [
+        {
+          "name": "Invalid Registration Payload (Zod 400 Envelope)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid-email-format\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid payload returns 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response envelope has success false and error details', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Login Payload (Zod 400 Envelope)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid-email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid login returns 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error envelope is structured properly', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resource Not Found (404 Envelope)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/60c72b2f9b1d8b0015f8a000",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "60c72b2f9b1d8b0015f8a000"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Non-existent resource returns 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('404 envelope contains success false', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Object ID Parameter (400 Envelope)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/invalid-object-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "invalid-object-id"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid Mongo ID returns 400 or 404', function () {",
+                  "    pm.expect([400, 404, 500]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

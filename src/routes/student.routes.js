@@ -69,7 +69,7 @@ router.patch(
         
         const student = await Student.findByIdAndUpdate(
             studentId,
-            { $set: { status: "VERIFIED", verifiedBy: req.user._id } },
+            { $set: { status: "VERIFIED", approvedBy: req.user._id } },
             { new: true }
         ).populate("userId", "name email username");
         

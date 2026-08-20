@@ -37,7 +37,12 @@ const jobSchema=new mongoose.Schema({
     applicationDeadline:{
         type:Date
     }  
-},{timestamps:true})
+},{timestamps:true});
+
+jobSchema.index({ company: 1, status: 1 });
+jobSchema.index({ createdBy: 1 });
+jobSchema.index({ status: 1, jobType: 1 });
+jobSchema.index({ applicationDeadline: 1 });
 
 jobSchema.plugin(mongooseAggregatePaginate);
 export const Job=mongoose.model("Job",jobSchema);

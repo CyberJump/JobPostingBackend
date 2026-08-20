@@ -2,79 +2,80 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-const userSchema=new mongoose.Schema({
-    name:{
-        type:String,
-        required:true,
-        trim:true,
-        lowercase:true,
-        required:true,
+const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
     },
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+    },
+    password: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    role: {
+        type: String,
+        enum: ["STUDENT", "COMPANY", "ADMIN"],
+        default: "STUDENT",
+    },
+    profilePicture: {
+        type: String,
+    },
+    status: {
+        type: String,
+        enum: ["ACTIVE", "PENDING", "BLOCKED"],
+        default: "PENDING",
+    },
+    isVerified: {
+        type: Boolean,
+        default: false,
+    },
+    refreshToken: {
+        type: String,
+    },
+}, { timestamps: true });
 
-    username:{
-        type:String,
-        required:true,
-        unique:true,
-        trim:true,
-        lowercase:true,
-    },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
-        trim:true,
-        lowercase:true,
-    },
-    password:{
-        type:String,
-        required:true,
-        trim:true,
-    },
-    role:{
-        type:String,
-        enum:["STUDENT","COMPANY","ADMIN"],
-        default:"STUDENT",
-    },
-    profilePicture:{
-        type:String,
-    },
-    status:{
-        type:String,
-        enum:["ACTIVE","PENDING","BLOCKED"],
-        default:"PENDING",
-    },
-    refreshToken:{
-        type:String,
-    },
-    
-},{timestamps:true});
+import config from "../config/env.js";
 
-userSchema.pre("save",async function(){
-    if(!this.isModified("password")) return;
-    this.password=await bcrypt.hash(this.password,10);
-})
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
+    this.password = await bcrypt.hash(this.password, 10);
+});
 
-userSchema.methods.isPasswordCorrect=async function(password){
-    return await bcrypt.compare(password,this.password);
-}
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrypt.compare(password, this.password);
+};
 
-userSchema.methods.generateRefreshToken=async function(){
+userSchema.methods.generateRefreshToken = async function () {
     return jwt.sign({
-        _id:this._id,
-    },process.env.REFRESH_TOKEN_SECRET,{
-        expiresIn:process.env.REFRESH_TOKEN_EXPIRY
-    })
-}
+        _id: this._id,
+    }, config.auth.refreshTokenSecret, {
+        expiresIn: config.auth.refreshTokenExpiry,
+    });
+};
 
-userSchema.methods.generateAccessToken=async function(){
+userSchema.methods.generateAccessToken = async function () {
     return jwt.sign({
-        _id:this.id,
-        role:this.role,
-    },process.env.ACCESS_TOKEN_SECRET,{
-        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
-    })
-}
+        _id: this.id,
+        role: this.role,
+    }, config.auth.accessTokenSecret, {
+        expiresIn: config.auth.accessTokenExpiry,
+    });
+};
 
-
-export const User=mongoose.model("User",userSchema);
-
+export const User = mongoose.model("User", userSchema);

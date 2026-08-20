@@ -1,0 +1,325 @@
+openapi: 3.0.3
+info:
+  title: BusinessClinic API (JobPosting Backend)
+  description: Enterprise Modular Monolith Backend API for Student, Company, and Administrative Recruitment & Verification operations.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
+paths:
+  /health/live:
+    get:
+      summary: Process Liveness Probe
+      description: Returns process liveness status for container orchestration.
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: alive
+  /auth/otp/request:
+    post:
+      summary: Request OTP Verification Code
+      description: Generates a cryptographically secure 6-digit OTP code hashed with SHA-256 for email verification or password reset.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                purpose:
+                  type: string
+                  enum: [email_verify, password_reset]
+      responses:
+        '200':
+          description: OTP request processed
+        '429':
+          description: Rate limit exceeded or resend cooldown active
+  /auth/otp/verify:
+    post:
+      summary: Verify OTP Code
+      description: Validates submitted 6-digit OTP code against SHA-256 hash.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+                  example: "123456"
+                purpose:
+                  type: string
+                  enum: [email_verify, password_reset]
+      responses:
+        '200':
+          description: OTP verification successful
+        '400':
+          description: Invalid or expired OTP code
+        '429':
+          description: Account locked out due to 5 failed verification attempts
+  /users/register:
+    post:
+      summary: Register User
+      description: Creates a new user account (STUDENT, COMPANY, or ADMIN).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - username
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [STUDENT, COMPANY, ADMIN]
+                profileImage:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Validation error or duplicate email/username
+  /users/login:
+    post:
+      summary: User Login
+      description: Authenticates user credentials and issues HTTP-Only access and refresh JWT cookies.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Authentication successful
+        '401':
+          description: Invalid credentials
+  /users/refresh-token:
+    post:
+      summary: Refresh Access Token
+      description: Issues new access and refresh JWT tokens using existing refresh token cookie or body payload.
+      responses:
+        '200':
+          description: Tokens refreshed successfully
+        '401':
+          description: Invalid or expired refresh token
+  /users/logout:
+    post:
+      summary: User Logout
+      description: Clears HTTP-only JWT auth cookies and invalidates user session.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+  /users/change-password:
+    post:
+      summary: Change Password
+      description: Updates user password after verifying current password.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password updated successfully
+  /users/current-user:
+    get:
+      summary: Get Current User Profile
+      description: Fetches authenticated user profile data.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+  /jobs:
+    get:
+      summary: List Active Jobs
+      description: Fetches paginated active job postings with search, filter, and sorting options.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: jobType
+          in: query
+          schema:
+            type: string
+            enum: [FULLTIME, INTERNSHIP]
+      responses:
+        '200':
+          description: Jobs fetched successfully
+  /jobs/create:
+    post:
+      summary: Create Job Posting
+      description: Posts a new job opportunity (Company founder / Admin only).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, company, description, requirements, location, salary, jobType]
+              properties:
+                title:
+                  type: string
+                company:
+                  type: string
+                description:
+                  type: string
+                requirements:
+                  type: array
+                  items:
+                    type: string
+                location:
+                  type: string
+                salary:
+                  type: string
+                jobType:
+                  type: string
+                  enum: [FULLTIME, INTERNSHIP]
+      responses:
+        '201':
+          description: Job created successfully
+  /jobs/{jobId}:
+    get:
+      summary: Get Job Details
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details fetched
+  /jobs/{jobId}/update:
+    patch:
+      summary: Update Job Posting
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job updated
+  /jobs/{jobId}/close:
+    patch:
+      summary: Close Job Posting
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job closed
+  /applications/apply/{jobId}:
+    post:
+      summary: Apply for Job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Application submitted
+  /companies/create:
+    post:
+      summary: Create Company Profile
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Company created
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken

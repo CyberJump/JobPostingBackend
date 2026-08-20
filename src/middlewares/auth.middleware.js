@@ -3,13 +3,15 @@ import { ApiError } from "../utils/ApiError.js";
 import { asynchandler } from "../utils/asynchandler.js";
 import { User } from "../models/user.models.js";
 
+import config from "../config/env.js";
+
 export const verifyJWT=asynchandler(async(req, _,next)=>{
     try {
         const token=req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ","");
         if(!token){
             throw new ApiError(401,"Unauthorized access,token missing");
         }
-        const decodedToken=jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
+        const decodedToken=jwt.verify(token,config.auth.accessTokenSecret)
         const user=await User.findById(decodedToken?._id).
         select("-password -refreshToken");
     

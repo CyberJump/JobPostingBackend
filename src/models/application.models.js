@@ -35,9 +35,11 @@ const applicationSchema=new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
     },
-    
-
 },{timestamps:true});
+
+applicationSchema.index({ job: 1, student: 1 }, { unique: true });
+applicationSchema.index({ student: 1, status: 1 });
+applicationSchema.index({ company: 1, status: 1 });
 
 applicationSchema.plugin(mongooseAggregatePaginate);
 
