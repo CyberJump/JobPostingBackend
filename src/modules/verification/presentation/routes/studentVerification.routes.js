@@ -15,7 +15,6 @@ import {
 
 const router = Router();
 
-// ==================== USER ROUTES ====================
 router.post(
     "/",
     verifyJWT,

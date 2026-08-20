@@ -6,6 +6,7 @@ import CreateAdminUseCase from "../../application/use-cases/CreateAdminUseCase.j
 import RemoveAdminUseCase from "../../application/use-cases/RemoveAdminUseCase.js";
 import BlockUserUseCase from "../../application/use-cases/BlockUserUseCase.js";
 import UnblockUserUseCase from "../../application/use-cases/UnblockUserUseCase.js";
+import VerifyUserUseCase from "../../application/use-cases/VerifyUserUseCase.js";
 import BlockCompanyUseCase from "../../application/use-cases/BlockCompanyUseCase.js";
 import UnblockCompanyUseCase from "../../application/use-cases/UnblockCompanyUseCase.js";
 import ListUsersForModerationUseCase from "../../application/use-cases/ListUsersForModerationUseCase.js";
@@ -22,6 +23,7 @@ const createAdminUseCase = new CreateAdminUseCase(adminRepo);
 const removeAdminUseCase = new RemoveAdminUseCase(adminRepo);
 const blockUserUseCase = new BlockUserUseCase(moderationRepo);
 const unblockUserUseCase = new UnblockUserUseCase(moderationRepo);
+const verifyUserUseCase = new VerifyUserUseCase(moderationRepo);
 const blockCompanyUseCase = new BlockCompanyUseCase(moderationRepo);
 const unblockCompanyUseCase = new UnblockCompanyUseCase(moderationRepo);
 const listUsersUseCase = new ListUsersForModerationUseCase(moderationRepo);
@@ -49,6 +51,11 @@ export const BlockUser = asynchandler(async (req, res) => {
 export const UnblockUser = asynchandler(async (req, res) => {
     const unblockedUser = await unblockUserUseCase.execute(req.user, req.params.userId);
     return res.status(200).json(new ApiResponse(200, unblockedUser, "User unblocked successfully"));
+});
+
+export const VerifyUser = asynchandler(async (req, res) => {
+    const verifiedUser = await verifyUserUseCase.execute(req.user, req.params.userId);
+    return res.status(200).json(new ApiResponse(200, verifiedUser, "User verified and activated successfully"));
 });
 
 export const BlockCompany = asynchandler(async (req, res) => {

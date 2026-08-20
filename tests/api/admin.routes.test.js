@@ -65,4 +65,66 @@ describe("Admin & Moderation Routes API Endpoints (/api/v1/admin/*)", () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.users).toBeDefined();
     });
+
+    it("PATCH /api/v1/admin/users/:userId/verify should verify and activate pending user", async () => {
+        const mockPendingUser = { _id: "507f1f77bcf86cd799439022", name: "Pending User", role: "STUDENT", status: "PENDING", isVerified: false };
+        const mockActiveUser = { ...mockPendingUser, status: "ACTIVE", isVerified: true };
+
+        const mockQuery = (val) => ({
+            select: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue(val),
+            then: (cb) => Promise.resolve(val).then(cb),
+        });
+
+        jest.spyOn(User, "findById").mockImplementation((id) => {
+            if (id === "507f1f77bcf86cd799439099") {
+                return mockQuery({ _id: "507f1f77bcf86cd799439099", role: "ADMIN", status: "ACTIVE" });
+            }
+            if (id === "507f1f77bcf86cd799439022") {
+                return mockQuery(mockPendingUser);
+            }
+            return mockQuery(null);
+        });
+
+        jest.spyOn(User, "findByIdAndUpdate").mockReturnValue({
+            select: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue(mockActiveUser),
+        });
+
+        const response = await request(app)
+            .patch("/api/v1/admin/users/507f1f77bcf86cd799439022/verify")
+            .set("Authorization", `Bearer ${adminAuthToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe("ACTIVE");
+    });
+
+    it("PATCH /api/v1/admin/users/:userId/block should return 400 when attempting to block a pending user", async () => {
+        const mockPendingUser = { _id: "507f1f77bcf86cd799439022", name: "Pending User", role: "STUDENT", status: "PENDING" };
+
+        const mockQuery = (val) => ({
+            select: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue(val),
+            then: (cb) => Promise.resolve(val).then(cb),
+        });
+
+        jest.spyOn(User, "findById").mockImplementation((id) => {
+            if (id === "507f1f77bcf86cd799439099") {
+                return mockQuery({ _id: "507f1f77bcf86cd799439099", role: "ADMIN", status: "ACTIVE" });
+            }
+            if (id === "507f1f77bcf86cd799439022") {
+                return mockQuery(mockPendingUser);
+            }
+            return mockQuery(null);
+        });
+
+        const response = await request(app)
+            .patch("/api/v1/admin/users/507f1f77bcf86cd799439022/block")
+            .set("Authorization", `Bearer ${adminAuthToken}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.message).toContain("Cannot block a pending user");
+    });
 });

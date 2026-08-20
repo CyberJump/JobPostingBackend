@@ -7,6 +7,10 @@ export class IModerationRepository {
         throw new Error("Method updateUserStatus() must be implemented");
     }
 
+    async verifyUser(userId) {
+        throw new Error("Method verifyUser() must be implemented");
+    }
+
     async findUsers(query, options) {
         throw new Error("Method findUsers() must be implemented");
     }

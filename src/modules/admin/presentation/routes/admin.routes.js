@@ -6,6 +6,7 @@ import {
     RemoveAdmin,
     BlockUser,
     UnblockUser,
+    VerifyUser,
     BlockCompany,
     UnblockCompany,
     GetAllUsers,
@@ -33,6 +34,7 @@ router.delete("/remove-admin/:userId", RemoveAdmin);
 router.get("/users", GetAllUsers);
 router.patch("/users/:userId/block", BlockUser);
 router.patch("/users/:userId/unblock", UnblockUser);
+router.patch("/users/:userId/verify", VerifyUser);
 
 // Company moderation
 router.patch("/companies/:companyId/block", BlockCompany);

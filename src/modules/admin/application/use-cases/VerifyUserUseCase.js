@@ -1,6 +1,6 @@
 import { AppError } from "../../../../shared/errors/AppError.js";
 
-export class UnblockUserUseCase {
+export class VerifyUserUseCase {
     constructor(moderationRepository) {
         this.moderationRepository = moderationRepository;
     }
@@ -15,16 +15,12 @@ export class UnblockUserUseCase {
             throw new AppError(404, "User not found");
         }
 
-        if (targetUser.status === "PENDING") {
-            throw new AppError(400, "User is pending verification. Please verify the user first.");
-        }
-
         if (targetUser.status === "ACTIVE") {
-            throw new AppError(400, "User is already active");
+            throw new AppError(400, "User is already verified and active");
         }
 
-        return await this.moderationRepository.updateUserStatus(userId, "ACTIVE");
+        return await this.moderationRepository.verifyUser(userId);
     }
 }
 
-export default UnblockUserUseCase;
+export default VerifyUserUseCase;

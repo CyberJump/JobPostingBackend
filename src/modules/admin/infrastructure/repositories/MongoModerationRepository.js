@@ -26,6 +26,16 @@ export class MongoModerationRepository extends BaseRepository {
         return updated ? (updated.toObject ? updated.toObject() : updated) : null;
     }
 
+    async verifyUser(userId) {
+        if (!mongoose.isValidObjectId(userId)) return null;
+        const updated = await User.findByIdAndUpdate(
+            userId,
+            { $set: { status: "ACTIVE", isVerified: true } },
+            { new: true }
+        ).select("-password -refreshToken").exec();
+        return updated ? (updated.toObject ? updated.toObject() : updated) : null;
+    }
+
     async findUsers(matchCriteria, { page = 1, limit = 20 }) {
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const users = await User.find(matchCriteria)
