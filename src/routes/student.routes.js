@@ -7,6 +7,7 @@ import {
     UpdateStudentDetails 
 } from "../controllers/student.contoller.js";
 import { Student } from "../models/student.models.js";
+import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asynchandler } from "../utils/asynchandler.js";
@@ -75,6 +76,13 @@ router.patch(
         
         if (!student) {
             throw new ApiError(404, "Student profile not found");
+        }
+
+        if (student.userId) {
+            const uId = student.userId._id || student.userId;
+            await User.findByIdAndUpdate(uId, {
+                $set: { status: "ACTIVE", isVerified: true },
+            }).exec();
         }
         
         return res.status(200).json(

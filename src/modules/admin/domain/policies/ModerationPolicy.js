@@ -6,7 +6,7 @@ export class ModerationPolicy {
         const targetId = targetUser._id?.toString();
         if (actorId === targetId) return false; // cannot block self
         if (targetUser.role === "ADMIN") return false; // cannot block admin users directly
-        if (targetUser.status !== "ACTIVE") return false; // cannot block pending or already blocked users
+        if (targetUser.status === "BLOCKED") return false; // already blocked
         return true;
     }
 
@@ -19,7 +19,7 @@ export class ModerationPolicy {
     static canVerifyUser(actorUser, targetUser) {
         if (!actorUser || actorUser.role !== "ADMIN") return false;
         if (!targetUser) return false;
-        return targetUser.status === "PENDING"; // can verify pending users
+        return targetUser.status === "PENDING" || !targetUser.isVerified; // can verify pending or unverified users
     }
 
     static isValidRole(role) {

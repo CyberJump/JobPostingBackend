@@ -100,8 +100,9 @@ describe("Admin & Moderation Routes API Endpoints (/api/v1/admin/*)", () => {
         expect(response.body.data.status).toBe("ACTIVE");
     });
 
-    it("PATCH /api/v1/admin/users/:userId/block should return 400 when attempting to block a pending user", async () => {
+    it("PATCH /api/v1/admin/users/:userId/block should block user successfully", async () => {
         const mockPendingUser = { _id: "507f1f77bcf86cd799439022", name: "Pending User", role: "STUDENT", status: "PENDING" };
+        const mockBlockedUser = { ...mockPendingUser, status: "BLOCKED" };
 
         const mockQuery = (val) => ({
             select: jest.fn().mockReturnThis(),
@@ -119,12 +120,17 @@ describe("Admin & Moderation Routes API Endpoints (/api/v1/admin/*)", () => {
             return mockQuery(null);
         });
 
+        jest.spyOn(User, "findByIdAndUpdate").mockReturnValue({
+            select: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue(mockBlockedUser),
+        });
+
         const response = await request(app)
             .patch("/api/v1/admin/users/507f1f77bcf86cd799439022/block")
             .set("Authorization", `Bearer ${adminAuthToken}`);
 
-        expect(response.status).toBe(400);
-        expect(response.body.success).toBe(false);
-        expect(response.body.error.message).toContain("Cannot block a pending user");
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe("BLOCKED");
     });
 });

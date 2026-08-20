@@ -2,6 +2,7 @@ import BaseRepository from "../../../../infrastructure/database/repositories/bas
 import { VerificationApplication } from "../../../../models/verificationApplication.models.js";
 import { Student } from "../../../../models/student.models.js";
 import { Company } from "../../../../models/company.models.js";
+import { User } from "../../../../models/user.models.js";
 import IStudentVerificationRepository from "../../domain/ports/IStudentVerificationRepository.js";
 import mongoose from "mongoose";
 
@@ -59,6 +60,15 @@ export class MongoStudentVerificationRepository extends BaseRepository {
         ).exec();
 
         if (updated) {
+            if (updated.userId) {
+                const uId = updated.userId._id || updated.userId;
+                if (status === "APPROVED") {
+                    await User.findByIdAndUpdate(uId, {
+                        $set: { status: "ACTIVE", isVerified: true },
+                    }).exec();
+                }
+            }
+
             if (updated.applicantType === "STUDENT" && updated.studentProfileId) {
                 const studentStatus = status === "APPROVED" ? "VERIFIED" : "REJECTED";
                 await Student.findByIdAndUpdate(updated.studentProfileId, {

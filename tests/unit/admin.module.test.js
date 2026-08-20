@@ -46,14 +46,16 @@ describe("Admin & Moderation Domain Module Use Cases & Policies", () => {
         expect(AdminPolicy.canRemoveAdmin(studentUser, otherAdmin)).toBe(false);
     });
 
-    it("ModerationPolicy should prevent blocking self, other admins, or pending users", () => {
+    it("ModerationPolicy should prevent blocking self, other admins, or already blocked users", () => {
         const adminUser = { _id: "admin1", role: "ADMIN" };
         const otherAdmin = { _id: "admin2", role: "ADMIN" };
         const activeStudent = { _id: "student1", role: "STUDENT", status: "ACTIVE" };
         const pendingStudent = { _id: "student2", role: "STUDENT", status: "PENDING" };
+        const blockedStudent = { _id: "student3", role: "STUDENT", status: "BLOCKED" };
 
         expect(ModerationPolicy.canBlockUser(adminUser, activeStudent)).toBe(true);
-        expect(ModerationPolicy.canBlockUser(adminUser, pendingStudent)).toBe(false);
+        expect(ModerationPolicy.canBlockUser(adminUser, pendingStudent)).toBe(true);
+        expect(ModerationPolicy.canBlockUser(adminUser, blockedStudent)).toBe(false);
         expect(ModerationPolicy.canBlockUser(adminUser, adminUser)).toBe(false);
         expect(ModerationPolicy.canBlockUser(adminUser, otherAdmin)).toBe(false);
     });
@@ -88,14 +90,18 @@ describe("Admin & Moderation Domain Module Use Cases & Policies", () => {
         expect(mockModerationRepo.updateUserStatus).toHaveBeenCalledWith("student1", "BLOCKED");
     });
 
-    it("BlockUserUseCase should reject blocking a pending user", async () => {
+    it("BlockUserUseCase should block a pending user successfully", async () => {
         const adminUser = { _id: "admin1", role: "ADMIN" };
         const pendingStudent = { _id: "student2", role: "STUDENT", status: "PENDING" };
 
         mockModerationRepo.findUserById.mockResolvedValue(pendingStudent);
+        mockModerationRepo.updateUserStatus.mockResolvedValue({ ...pendingStudent, status: "BLOCKED" });
 
         const useCase = new BlockUserUseCase(mockModerationRepo);
-        await expect(useCase.execute(adminUser, "student2")).rejects.toThrow("Cannot block a pending user. User must be verified and active first.");
+        const result = await useCase.execute(adminUser, "student2");
+
+        expect(result.status).toBe("BLOCKED");
+        expect(mockModerationRepo.updateUserStatus).toHaveBeenCalledWith("student2", "BLOCKED");
     });
 
     it("UnblockUserUseCase should unblock a blocked user successfully", async () => {
@@ -112,14 +118,14 @@ describe("Admin & Moderation Domain Module Use Cases & Policies", () => {
         expect(mockModerationRepo.updateUserStatus).toHaveBeenCalledWith("student1", "ACTIVE");
     });
 
-    it("UnblockUserUseCase should reject unblocking a pending user", async () => {
+    it("UnblockUserUseCase should reject unblocking an active user", async () => {
         const adminUser = { _id: "admin1", role: "ADMIN" };
-        const pendingStudent = { _id: "student2", role: "STUDENT", status: "PENDING" };
+        const activeStudent = { _id: "student2", role: "STUDENT", status: "ACTIVE" };
 
-        mockModerationRepo.findUserById.mockResolvedValue(pendingStudent);
+        mockModerationRepo.findUserById.mockResolvedValue(activeStudent);
 
         const useCase = new UnblockUserUseCase(mockModerationRepo);
-        await expect(useCase.execute(adminUser, "student2")).rejects.toThrow("User is pending verification. Please verify the user first.");
+        await expect(useCase.execute(adminUser, "student2")).rejects.toThrow("User is not blocked");
     });
 
     it("VerifyUserUseCase should verify and activate a pending user successfully", async () => {

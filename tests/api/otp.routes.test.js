@@ -5,6 +5,7 @@ import otpService from "../../src/infrastructure/otp/otp.service.js";
 import redisService from "../../src/infrastructure/redis/redis.service.js";
 import { redisClientManager } from "../../src/infrastructure/redis/redis.client.js";
 import config from "../../src/config/env.js";
+import { User } from "../../src/models/user.models.js";
 
 describe("OTP Routes API Endpoints (/api/v1/auth/otp/*)", () => {
     beforeEach(() => {
@@ -12,6 +13,9 @@ describe("OTP Routes API Endpoints (/api/v1/auth/otp/*)", () => {
         jest.spyOn(redisClientManager, "isRedisReady").mockReturnValue(true);
         jest.spyOn(redisService, "increment").mockResolvedValue(1);
         jest.spyOn(redisService, "expire").mockResolvedValue(true);
+        jest.spyOn(User, "findOneAndUpdate").mockReturnValue({
+            exec: jest.fn().mockResolvedValue({}),
+        });
     });
 
     afterEach(() => {

@@ -65,6 +65,18 @@ export class MongoModerationRepository extends BaseRepository {
             { $set: { status, approvedBy: adminId } },
             { new: true }
         ).populate("founders.userId", "name email username").exec();
+
+        if (updated && status === "ACTIVE" && updated.founders) {
+            for (const f of updated.founders) {
+                const uId = f.userId?._id || f.userId;
+                if (uId) {
+                    await User.findByIdAndUpdate(uId, {
+                        $set: { status: "ACTIVE", isVerified: true },
+                    }).exec();
+                }
+            }
+        }
+
         return updated ? (updated.toObject ? updated.toObject() : updated) : null;
     }
 

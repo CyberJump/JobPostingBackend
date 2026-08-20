@@ -15,7 +15,7 @@ export class VerifyUserUseCase {
             throw new AppError(404, "User not found");
         }
 
-        if (targetUser.status === "ACTIVE") {
+        if (targetUser.isVerified && targetUser.status === "ACTIVE") {
             throw new AppError(400, "User is already verified and active");
         }
 

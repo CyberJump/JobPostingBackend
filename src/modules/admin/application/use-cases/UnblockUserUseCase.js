@@ -15,12 +15,8 @@ export class UnblockUserUseCase {
             throw new AppError(404, "User not found");
         }
 
-        if (targetUser.status === "PENDING") {
-            throw new AppError(400, "User is pending verification. Please verify the user first.");
-        }
-
-        if (targetUser.status === "ACTIVE") {
-            throw new AppError(400, "User is already active");
+        if (targetUser.status !== "BLOCKED") {
+            throw new AppError(400, "User is not blocked");
         }
 
         return await this.moderationRepository.updateUserStatus(userId, "ACTIVE");

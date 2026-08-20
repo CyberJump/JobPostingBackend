@@ -20,10 +20,6 @@ export class BlockUserUseCase {
             throw new AppError(400, "You cannot block yourself");
         }
 
-        if (targetUser.status === "PENDING") {
-            throw new AppError(400, "Cannot block a pending user. User must be verified and active first.");
-        }
-
         if (targetUser.status === "BLOCKED") {
             throw new AppError(400, "User is already blocked");
         }
