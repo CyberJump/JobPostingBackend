@@ -17,7 +17,7 @@ export const getRedisClient = () => {
     try {
         redisClient = new Redis(config.redis.url, {
             keyPrefix: `${config.redis.keyPrefix}:`,
-            connectTimeout: config.redis.connectTimeoutMs,
+            connectTimeout: Number(config.redis.connectTimeoutMs),
             lazyConnect: true,
             maxRetriesPerRequest: 3,
             retryStrategy(times) {
